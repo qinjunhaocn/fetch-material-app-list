@@ -1,0 +1,54 @@
+name: Sync Material You APKs to R2
+
+# 仅手动触发
+on:
+  workflow_dispatch:
+    inputs:
+      only_missing:
+        description: '只下载 R2 中尚不存在的 APK（跳过已有）'
+        required: false
+        default: 'true'
+      clean_stale:
+        description: '清理每个应用文件夹中不属于最新 release 的旧 APK'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # APK 数量较多，给足超时时间
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout Material-You-app-list
+        uses: actions/checkout@v4
+        with:
+          repository: nyas1/Material-You-app-list
+          ref: main
+          path: app-list
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --no-cache-dir requests boto3
+
+      - name: Sync APKs to Cloudflare R2
+        env:
+          # GitHub 自动提供，用于提高 API 速率限制
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # R2 凭证，需要在仓库 Settings → Secrets 中配置
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          # 可选：自定义 R2 自定义域名（用于返回可访问的下载链接）
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          ONLY_MISSING: ${{ inputs.only_missing || 'true' }}
+          CLEAN_STALE: ${{ inputs.clean_stale || 'true' }}
+        run: python scripts/sync_apks.py
