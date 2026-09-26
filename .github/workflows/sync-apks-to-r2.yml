@@ -23,6 +23,11 @@ jobs:
     timeout-minutes: 360
 
     steps:
+      # 1. 先拉取当前仓库（包含 scripts/sync_apks.py 工作流脚本）
+      - name: Checkout current repo
+        uses: actions/checkout@v4
+
+      # 2. 再拉取 Material-You-app-list（用于读取 README 中的应用列表）
       - name: Checkout Material-You-app-list
         uses: actions/checkout@v4
         with:
